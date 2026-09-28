@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 학습 상담실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  /* ============================================================
+     ★ 설정: n8n Webhook 노드의 "Production URL"을 아래에 붙여넣으세요
+     ============================================================ */
+  const WEBHOOK_URL = "https://gt4065b.zeabur.app/webhook/여기에-웹훅-경로";
+  const PROFESSOR = { ko: "김형태 교수", en: "Prof. Hyoungtae Kim", zh: "金亨泰教授" };
+</script>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #ffffff; --ink: #1c2233; --muted: #6b7489;
+    --line: #e3e7f0; --brand: #3056d3; --brand-soft: #eaf0ff;
+    --ai: #f0f4ff; --mail: #fff7e8; --mail-line: #f3d9a4; --danger: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11141c; --card: #1a1f2b; --ink: #e8ebf3; --muted: #9aa3b8;
+      --line: #2a3142; --brand: #6d8bff; --brand-soft: #232c45;
+      --ai: #1f2740; --mail: #2c2618; --mail-line: #5a4a26; --danger: #ff7b7b;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', 'Noto Sans SC', system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); min-height: 100vh; line-height: 1.6;
+  }
+  html[lang="zh"] body { font-family: 'Noto Sans SC', 'Noto Sans KR', system-ui, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 40px; }
+
+  .lang { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+  .lang-group { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .lang-group button {
+    width: auto; font: inherit; font-size: 13px; font-weight: 500;
+    background: transparent; color: var(--muted); border: none;
+    border-radius: 999px; padding: 5px 14px; cursor: pointer;
+  }
+  .lang-group button.on { background: var(--brand); color: #fff; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  header .badge {
+    display: inline-block; font-size: 12px; font-weight: 500;
+    background: var(--brand-soft); color: var(--brand);
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 10px;
+  }
+  header h1 { font-size: 26px; font-weight: 700; }
+  header p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .steps { display: flex; gap: 8px; font-size: 13px; color: var(--muted); }
+  .steps div { flex: 1; text-align: center; padding: 10px 6px; background: var(--bg); border-radius: 10px; }
+  .steps b { display: block; color: var(--ink); font-size: 14px; margin-bottom: 2px; }
+
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 14px; }
+  input, textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px;
+    outline: none; transition: border-color .15s;
+  }
+  input:focus, textarea:focus { border-color: var(--brand); }
+  textarea { min-height: 120px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  #send {
+    width: 100%; font: inherit; font-weight: 700; font-size: 15px;
+    background: var(--brand); color: #fff; border: none; border-radius: 12px;
+    padding: 14px; cursor: pointer; transition: opacity .15s;
+  }
+  #send:disabled { opacity: .55; cursor: wait; }
+  .error { color: var(--danger); font-size: 13px; margin-top: 10px; display: none; }
+
+  #history { display: flex; flex-direction: column; gap: 14px; }
+  .q {
+    align-self: flex-end; max-width: 85%; background: var(--brand); color: #fff;
+    padding: 12px 16px; border-radius: 16px 16px 4px 16px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .a {
+    align-self: flex-start; max-width: 92%; background: var(--ai);
+    border: 1px solid var(--line); padding: 14px 16px;
+    border-radius: 16px 16px 16px 4px; white-space: pre-wrap; word-break: break-word;
+  }
+  .a.mail { background: var(--mail); border-color: var(--mail-line); }
+  .a .who { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+  .typing span {
+    display: inline-block; width: 7px; height: 7px; margin-right: 4px;
+    background: var(--muted); border-radius: 50%; animation: blink 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100% { opacity: .2 } 40% { opacity: 1 } }
+  footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; }
+
+  @media (max-width: 480px) {
+    .row { grid-template-columns: 1fr; gap: 0; }
+    header h1 { font-size: 22px; }
+    .steps { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang">
+    <div class="lang-group" role="group" aria-label="Language">
+      <button type="button" data-lang="ko">한국어</button>
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="zh">中文</button>
+    </div>
+  </div>
+
+  <header>
+    <span class="badge" data-i18n="badge"></span>
+    <h1 data-i18n="title"></h1>
+    <p data-i18n="intro"></p>
+  </header>
+
+  <div class="card steps">
+    <div><b data-i18n="s1"></b><span data-i18n="s1d"></span></div>
+    <div><b data-i18n="s2"></b><span data-i18n="s2d"></span></div>
+    <div><b data-i18n="s3"></b><span data-i18n="s3d"></span></div>
+  </div>
+
+  <div class="card">
+    <form id="form" novalidate>
+      <div class="row">
+        <div class="field">
+          <label for="name" data-i18n="name"></label>
+          <input id="name" required autocomplete="name" data-i18n-ph="namePh">
+        </div>
+        <div class="field">
+          <label for="sid" data-i18n="sid"></label>
+          <input id="sid" required inputmode="numeric" placeholder="20260001">
+        </div>
+      </div>
+      <div class="field">
+        <label for="email" data-i18n="email"></label>
+        <input id="email" type="email" required autocomplete="email" placeholder="student@wsu.ac.kr">
+        <div class="hint" data-i18n="emailHint"></div>
+      </div>
+      <div class="field">
+        <label for="question" data-i18n="question"></label>
+        <textarea id="question" required data-i18n-ph="questionPh"></textarea>
+      </div>
+      <button id="send" type="submit" data-i18n="send"></button>
+      <div class="error" id="err"></div>
+    </form>
+  </div>
+
+  <div id="history"></div>
+
+  <footer data-i18n="footer"></footer>
+</div>
+
+<script>
+  const T = {
+    ko: {
+      pageTitle: "AI 학습 상담실",
+      badge: "24시간 질문 접수",
+      title: "AI 학습 상담실",
+      intro: p => `궁금한 점을 남기면 AI가 바로 답하고, AI가 답하기 어려운 질문은 ${p}께 전달되어 이메일로 답변드립니다.`,
+      s1: "① 질문 작성", s1d: "이름·학번·이메일과 함께",
+      s2: "② AI 분석", s2d: "바로 답변 가능한지 판단",
+      s3: "③ 답변", s3d: "화면 또는 이메일로",
+      name: "이름", namePh: "홍길동", sid: "학번", email: "이메일",
+      emailHint: "교수님 답변이 필요한 경우 이 주소로 회신됩니다.",
+      question: "질문", questionPh: "수업 내용, 과제, 진로 등 무엇이든 질문하세요.",
+      send: "질문 보내기", sending: "답변을 준비하고 있어요…",
+      footer: "질문과 답변은 학습 지원을 위해 기록·보관됩니다.",
+      bot: "🤖 AI 상담봇", botWait: "AI 상담봇",
+      fwd: "📧 교수님께 전달됨",
+      fwdMsg: (p, e) => `이 질문은 ${p}께서 직접 확인하실 내용이라 전달해 두었어요.\n답변은 <b>${e}</b> 으로 보내드릴게요.`,
+      errEmpty: "이름, 학번, 이메일, 질문을 모두 입력해 주세요.",
+      errEmail: "이메일 주소 형식을 확인해 주세요.",
+      errSend: "질문을 보내지 못했어요. 잠시 후 다시 시도해 주세요."
+    },
+    en: {
+      pageTitle: "AI Learning Help Desk",
+      badge: "Open 24/7",
+      title: "AI Learning Help Desk",
+      intro: p => `Ask anything and the AI will answer right away. Questions the AI can't handle are forwarded to ${p}, who will reply by email.`,
+      s1: "① Ask", s1d: "With your name, ID and email",
+      s2: "② AI review", s2d: "Checks if it can answer",
+      s3: "③ Answer", s3d: "On screen or by email",
+      name: "Name", namePh: "Your full name", sid: "Student ID", email: "Email",
+      emailHint: "If the professor needs to answer, the reply will be sent here.",
+      question: "Your question", questionPh: "Lectures, assignments, careers — ask anything.",
+      send: "Send question", sending: "Preparing your answer…",
+      footer: "Questions and answers are recorded to support your learning.",
+      bot: "🤖 AI Assistant", botWait: "AI Assistant",
+      fwd: "📧 Forwarded to the professor",
+      fwdMsg: (p, e) => `This question needs ${p}'s personal attention, so it has been forwarded.\nThe reply will be sent to <b>${e}</b>.`,
+      errEmpty: "Please fill in your name, student ID, email and question.",
+      errEmail: "Please check your email address.",
+      errSend: "Your question could not be sent. Please try again shortly."
+    },
+    zh: {
+      pageTitle: "AI 学习咨询室",
+      badge: "24小时受理提问",
+      title: "AI 学习咨询室",
+      intro: p => `留下你的问题，AI 会立即回答；AI 无法回答的问题将转交给${p}，并通过电子邮件回复你。`,
+      s1: "① 提交问题", s1d: "填写姓名、学号和邮箱",
+      s2: "② AI 分析", s2d: "判断能否直接回答",
+      s3: "③ 获得回复", s3d: "页面显示或邮件回复",
+      name: "姓名", namePh: "请输入姓名", sid: "学号", email: "电子邮箱",
+      emailHint: "如需教授回复，答复将发送到此邮箱。",
+      question: "问题", questionPh: "课程内容、作业、职业规划等，欢迎提问。",
+      send: "提交问题", sending: "正在准备回答…",
+      footer: "提问与回答将被记录保存，用于学习支持。",
+      bot: "🤖 AI 助手", botWait: "AI 助手",
+      fwd: "📧 已转交教授",
+      fwdMsg: (p, e) => `这个问题需要${p}亲自查看，已为你转交。\n回复将发送至 <b>${e}</b>。`,
+      errEmpty: "请填写姓名、学号、邮箱和问题。",
+      errEmail: "请检查电子邮箱格式。",
+      errSend: "问题发送失败，请稍后再试。"
+    }
+  };
+
+  const $ = id => document.getElementById(id);
+  const form = $('form'), btn = $('send'), err = $('err'), history = $('history');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function pickDefaultLang() {
+    try { const s = localStorage.getItem('lang'); if (T[s]) return s; } catch (e) {}
+    const b = (navigator.language || 'ko').toLowerCase();
+    if (b.startsWith('zh')) return 'zh';
+    if (b.startsWith('ko')) return 'ko';
+    return 'en';
+  }
+  let lang = pickDefaultLang();
+
+  function applyLang(l) {
+    lang = l;
+    const t = T[l];
+    document.documentElement.lang = l;
+    document.title = t.pageTitle;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const v = t[el.dataset.i18n];
+      el.textContent = typeof v === 'function' ? v(PROFESSOR[l]) : v;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t[el.dataset.i18nPh]; });
+    document.querySelectorAll('.lang-group button').forEach(b => b.classList.toggle('on', b.dataset.lang === l));
+    err.style.display = 'none';
+    try { localStorage.setItem('lang', l); } catch (e) {}
+  }
+  document.querySelectorAll('.lang-group button').forEach(b => b.addEventListener('click', () => applyLang(b.dataset.lang)));
+  applyLang(lang);
+
+  // 한 번 입력한 이름·학번·이메일은 다음 질문 때 자동으로 채워둠
+  try {
+    const saved = JSON.parse(localStorage.getItem('student') || '{}');
+    ['name', 'sid', 'email'].forEach(k => { if (saved[k]) $(k).value = saved[k]; });
+  } catch (e) {}
+
+  function showError(msg) { err.textContent = msg; err.style.display = 'block'; }
+  function bubble(cls, html) {
+    const d = document.createElement('div');
+    d.className = cls; d.innerHTML = html;
+    history.appendChild(d);
+    d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return d;
+  }
+
+  // n8n 응답을 유연하게 해석 (여러 형태의 JSON 또는 일반 텍스트 모두 처리)
+  function parseReply(raw) {
+    let data;
+    try { data = JSON.parse(raw); } catch (e) { return { escalated: !raw.trim(), text: raw.trim() }; }
+    if (Array.isArray(data)) data = data[0] || {};
+    if (data && data.json) data = data.json;
+    const text = data.answer ?? data.output ?? data.reply ?? data.text ?? data.message ?? '';
+    const flag = String(data.type ?? data.route ?? data.status ?? '').toLowerCase();
+    const escalated =
+      data.escalated === true || data.needsProfessor === true || data.email === true ||
+      ['email', 'escalate', 'escalated', 'professor', 'forwarded'].includes(flag) ||
+      !String(text).trim();
+    return { escalated, text: String(text).trim() };
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.style.display = 'none';
+    const t = T[lang];
+
+    const payload = {
+      name: $('name').value.trim(),
+      studentId: $('sid').value.trim(),
+      email: $('email').value.trim(),
+      question: $('question').value.trim(),
+      language: lang,   // ko | en | zh — AI가 이 언어로 답하도록 n8n에서 사용
+      submittedAt: new Date().toISOString(),
+      source: 'web'
+    };
+    if (!payload.name || !payload.studentId || !payload.email || !payload.question) return showError(t.errEmpty);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return showError(t.errEmail);
+    try { localStorage.setItem('student', JSON.stringify({ name: payload.name, sid: payload.studentId, email: payload.email })); } catch (e) {}
+
+    const qEl = bubble('q', esc(payload.question));
+    const wait = bubble('a', `<div class="who">${t.botWait}</div><div class="typing"><span></span><span></span><span></span></div>`);
+    btn.disabled = true; btn.textContent = t.sending;
+
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const r = parseReply(await res.text());
+
+      if (r.escalated) {
+        wait.className = 'a mail';
+        wait.innerHTML = `<div class="who">${t.fwd}</div>` +
+          (r.text ? esc(r.text) + '\n\n' : '') +
+          t.fwdMsg(esc(PROFESSOR[lang]), esc(payload.email));
+      } else {
+        wait.innerHTML = `<div class="who">${t.bot}</div>${esc(r.text)}`;
+      }
+      $('question').value = '';
+    } catch (e2) {
+      wait.remove(); qEl.remove();
+      showError(`${t.errSend} (${e2.message})`);
+    } finally {
+      btn.disabled = false; btn.textContent = T[lang].send;
+    }
+  });
+</script>
+</body>
+</html>
